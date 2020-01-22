@@ -1,12 +1,4 @@
 /*
-  Import the ip-cidr npm package.
-  See https://www.npmjs.com/package/ip-cidr
-  The ip-cidr package exports a class.
-  Assign the class definition to variable IPCIDR.
-*/
-const IPCIDR = require('ip-cidr');
-
-/*
   Import the built-in path module.
   See https://nodejs.org/api/path.html
   The path module provides utilities for working with file and directory paths.
@@ -23,6 +15,14 @@ const path = require('path');
  */
 const { getIpv4MappedIpv6Address } = require(path.join(__dirname, 'ipv6.js'));
 
+/*
+  Import the ip-cidr npm package.
+  See https://www.npmjs.com/package/ip-cidr
+  The ip-cidr package exports a class.
+  Assign the class definition to variable IPCIDR.
+*/
+const IPCIDR = require('ip-cidr');
+
 /**
  * Calculate and return the first host IP address from a CIDR subnet.
  * @param {string} cidrStr - The IPv4 subnet expressed
@@ -35,7 +35,10 @@ function getFirstIpAddress(cidrStr, callback) {
   // Initialize return arguments for callback
   let firstIpAddress = null;
   let callbackError = null;
-  let ipv6Address = null;
+  let ipObj = {
+      ipv4: null,
+      ipv6: null
+      }
 
   // Instantiate an object from the imported class and assign the instance to variable cidr.
   const cidr = new IPCIDR(cidrStr);
@@ -55,17 +58,19 @@ function getFirstIpAddress(cidrStr, callback) {
     // If the passed CIDR is valid, call the object's toArray() method.
     // Notice the destructering assignment syntax to get the value of the first array's element.
     [firstIpAddress] = cidr.toArray(options);
-    ipv6Address = getIpv4MappedIpv6Address(firstIpAddress);
+    if (firstIpAddress != null) {
+        ipObj['ipv4'] = firstIpAddress
+        ipObj['ipv6'] = getIpv4MappedIpv6Address(firstIpAddress);
+    }
   }
+
   // Call the passed callback function.
   // Node.js convention is to pass error data as the first argument to a callback.
   // The IAP convention is to pass returned data as the first argument and error
   // data as the second argument to the callback function.
-  return callback(firstIpAddress, ipv6Address, callbackError);
-}
 
-//Added this comment and line.
-//Now added another new line.
+  return callback(ipObj, callbackError);
+}
 
 /*
   This section is used to test function and log any errors.
@@ -84,13 +89,13 @@ function main() {
     console.log(`\n--- Test Number ${i + 1} getFirstIpAddress(${sampleCidrs[i]}) ---`);
     // Call getFirstIpAddress and pass the test subnet and an anonymous callback function.
     // The callback is using the fat arrow operator: () => { }
-    getFirstIpAddress(sampleCidrs[i], (data, data1, error) => {
+    getFirstIpAddress(sampleCidrs[i], (data, error) => {
       // Now we are inside the callback function.
       // Display the results on the console.
       if (error) {
         console.error(`  Error returned from GET request: ${error}`);
       }
-      console.log(`  Response returned from GET request: (ipv4): ${data}, (ipv6): ${data1}`);
+      console.log(`  Response returned from GET request: {\"ipv4\":\"${data['ipv4']}\",\"ipv6\":\"${data['ipv6']}\"}`);
     });
   }
   // Iterate over sampleIpv4s and pass the element's value to getIpv4MappedIpv6Address().
